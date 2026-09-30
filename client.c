@@ -117,13 +117,26 @@ void iniciarCaraACara(
 
     char buffer[BUFFER_SIZE];
 
+    /*
+        Quantidade de mensagens enviadas pelo cliente.
+    */
+    int qtdDeRodadasClient = 0;
+
+    /*
+        Quantidade recebida do servidor no final.
+    */
+    int qtdDeRodadasServer = 0;
+
+    char nomeServidor[BUFFER_SIZE] = "";
+
+
     limparTela();
 
 
     /*
-        ======================================
-        CABEÇALHO DO CLIENTE
-        ======================================
+        ==============================
+        CABEÇALHO
+        ==============================
     */
 
     printf(
@@ -145,21 +158,23 @@ void iniciarCaraACara(
     );
 
 
-    /*
-        O primeiro turno pertence ao servidor.
-    */
-
     printf(
-        "Aguardando mensagem do SERVIDOR...\n"
+        "Aguardando mensagem do SERVER...\n"
     );
 
+
+    /*
+        ==============================
+        COMUNICAÇÃO
+        ==============================
+    */
 
     while (1) {
 
         /*
-            ------------------------------
-            VEZ DO SERVIDOR
-            ------------------------------
+            --------------------------------
+            VEZ DO SERVER
+            --------------------------------
         */
 
         if (!receberMensagem(
@@ -177,37 +192,101 @@ void iniciarCaraACara(
 
 
         /*
-            Servidor terminou.
+            Resultado final.
         */
+        if (strncmp(
+                buffer,
+                "RESULT:",
+                7
+            ) == 0) {
 
+            /*
+                Formato:
+
+                RESULT:nomeServer|nomeClient|qtdServer|qtdClient
+            */
+
+            char dados[BUFFER_SIZE];
+
+            strcpy(
+                dados,
+                buffer + 7
+            );
+
+
+            char *parte1 = strtok(
+                dados,
+                "|"
+            );
+
+            char *parte2 = strtok(
+                NULL,
+                "|"
+            );
+
+            char *parte3 = strtok(
+                NULL,
+                "|"
+            );
+
+            char *parte4 = strtok(
+                NULL,
+                "|"
+            );
+
+
+            if (
+                parte1 != NULL &&
+                parte2 != NULL &&
+                parte3 != NULL &&
+                parte4 != NULL
+            ) {
+
+                strcpy(
+                    nomeServidor,
+                    parte1
+                );
+
+                qtdDeRodadasServer =
+                    atoi(parte3);
+
+                qtdDeRodadasClient =
+                    atoi(parte4);
+            }
+
+            continue;
+        }
+
+
+        /*
+            Fim do jogo.
+        */
         if (strcmp(
                 buffer,
                 "GAME_END"
             ) == 0) {
 
-            printf(
-                "\nCara a cara encerrado pelo servidor.\n"
-            );
-
-            return;
+            break;
         }
 
 
+        /*
+            Servidor encerrou antes de uma
+            mensagem normal.
+        */
         if (strcmp(
                 buffer,
                 "GAME_EXIT"
             ) == 0) {
 
-            printf(
-                "\nServidor encerrou o cara a cara.\n"
-            );
-
-            return;
+            break;
         }
 
 
         /*
-            Mostra mensagem do servidor.
+            --------------------------------
+            MENSAGEM DO SERVER
+            --------------------------------
         */
 
         if (strncmp(
@@ -217,22 +296,20 @@ void iniciarCaraACara(
             ) == 0) {
 
             printf(
-                "\nSERVIDOR (%s): %s\n",
-                "OPONENTE",
+                "\nSERVER: %s\n",
                 buffer + 7
             );
         }
 
 
         /*
-            ------------------------------
+            --------------------------------
             VEZ DO CLIENTE
-            ------------------------------
+            --------------------------------
         */
 
         printf(
-            "\nSua vez (%s)\n",
-            nomeCliente
+            "\nSua vez (CLIENT)\n"
         );
 
         printf(
@@ -253,9 +330,8 @@ void iniciarCaraACara(
 
 
         /*
-            Cliente encerra.
+            /sair NÃO conta.
         */
-
         if (strcmp(
                 buffer,
                 "/sair"
@@ -271,8 +347,11 @@ void iniciarCaraACara(
 
 
         /*
-            Envia mensagem.
+            Mensagem normal do cliente.
+            Conta +1.
         */
+        qtdDeRodadasClient++;
+
 
         char mensagemEnvio[BUFFER_SIZE];
 
@@ -298,9 +377,61 @@ void iniciarCaraACara(
 
 
         printf(
-            "\nAguardando mensagem do SERVIDOR...\n"
+            "\nAguardando mensagem do SERVER...\n"
         );
     }
+
+
+    /*
+        ==============================
+        RESULTADO FINAL
+        ==============================
+    */
+
+    limparTela();
+
+    printf(
+        "========================================\n"
+    );
+
+    printf(
+        "             FIM DO CARA A CARA\n"
+    );
+
+    printf(
+        "========================================\n\n"
+    );
+
+    printf(
+        "Categoria: %s\n\n",
+        nomeCategoria
+    );
+
+    printf(
+        "SERVER: %s\n",
+        nomeServidor
+    );
+
+    printf(
+        "Quantidade de mensagens: %d\n\n",
+        qtdDeRodadasServer
+    );
+
+    printf(
+        "CLIENT: %s\n",
+        nomeCliente
+    );
+
+    printf(
+        "Quantidade de mensagens: %d\n",
+        qtdDeRodadasClient
+    );
+
+    printf(
+        "\n========================================\n"
+    );
+
+    system("pause");
 }
 
 /* =========================================================

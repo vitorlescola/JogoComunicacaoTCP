@@ -379,26 +379,19 @@ void iniciarCaraACara(
     char nomeServidor[MAX_LINHA];
     char nomeCliente[MAX_LINHA];
 
-    strcpy(
-        nomeServidor,
-        nomes[indiceServidor]
-    );
-
-    strcpy(
-        nomeCliente,
-        nomes[indiceCliente]
-    );
+    strcpy(nomeServidor, nomes[indiceServidor]);
+    strcpy(nomeCliente, nomes[indiceCliente]);
 
 
     /*
-        Limpa a tela do servidor.
+        Quantidade de mensagens enviadas por cada jogador.
     */
+    int qtdDeRodadasServer = 0;
+    int qtdDeRodadasClient = 0;
+
+
     limparTela();
 
-
-    /*
-        Avisa o cliente para limpar a tela.
-    */
     enviarMensagem(
         clientSocket,
         "CLEAR"
@@ -406,14 +399,8 @@ void iniciarCaraACara(
 
 
     /*
-        Envia para o cliente:
-        - nome da categoria
-        - nome que pertence ao cliente
-
-        Formato:
-        CATEGORY:nomeCategoria|nomeCliente
+        Envia categoria e nome do cliente.
     */
-
     snprintf(
         buffer,
         sizeof(buffer),
@@ -429,9 +416,9 @@ void iniciarCaraACara(
 
 
     /*
-        ======================================
+        ==============================
         TELA DO SERVIDOR
-        ======================================
+        ==============================
     */
 
     printf(
@@ -454,13 +441,13 @@ void iniciarCaraACara(
 
 
     /*
-        ======================================
-        PRIMEIRO TURNO - SERVIDOR
-        ======================================
+        ==============================
+        PRIMEIRA MENSAGEM - SERVIDOR
+        ==============================
     */
 
     printf(
-        "Sua vez (SERVIDOR)\n"
+        "Sua vez (SERVER)\n"
     );
 
     printf(
@@ -479,6 +466,12 @@ void iniciarCaraACara(
     limparEntrada(buffer);
 
 
+    /*
+        A primeira mensagem também conta.
+    */
+    qtdDeRodadasServer++;
+
+
     char mensagemEnvio[BUFFER_SIZE];
 
     snprintf(
@@ -495,17 +488,17 @@ void iniciarCaraACara(
 
 
     /*
-        ======================================
-        LOOP DA PARTIDA
-        ======================================
+        ==============================
+        COMUNICAÇÃO
+        ==============================
     */
 
     while (1) {
 
         /*
-            ------------------------------
+            --------------------------------
             VEZ DO CLIENTE
-            ------------------------------
+            --------------------------------
         */
 
         printf(
@@ -527,49 +520,44 @@ void iniciarCaraACara(
 
 
         /*
-            Cliente encerrou.
+            /sair não é contado.
         */
-
         if (strcmp(
                 buffer,
                 "GAME_EXIT"
             ) == 0) {
-
-            printf(
-                "\nCliente encerrou o cara a cara.\n"
-            );
 
             break;
         }
 
 
         /*
-            Mostra mensagem recebida.
+            Cliente enviou uma mensagem.
+            Agora conta +1.
         */
-
         if (strncmp(
                 buffer,
                 "CLIENT:",
                 7
             ) == 0) {
 
+            qtdDeRodadasClient++;
+
             printf(
-                "\n%s: %s\n",
-                nomeCliente,
+                "\nCLIENT: %s\n",
                 buffer + 7
             );
         }
 
 
         /*
-            ------------------------------
+            --------------------------------
             VEZ DO SERVIDOR
-            ------------------------------
+            --------------------------------
         */
 
         printf(
-            "\nSua vez (%s)\n",
-            nomeServidor
+            "\nSua vez (SERVER)\n"
         );
 
         printf(
@@ -589,9 +577,8 @@ void iniciarCaraACara(
 
 
         /*
-            Servidor encerra.
+            /sair NÃO conta.
         */
-
         if (strcmp(
                 buffer,
                 "/sair"
@@ -604,6 +591,13 @@ void iniciarCaraACara(
 
             break;
         }
+
+
+        /*
+            Mensagem normal do servidor.
+            Conta +1.
+        */
+        qtdDeRodadasServer++;
 
 
         snprintf(
@@ -627,20 +621,93 @@ void iniciarCaraACara(
     }
 
 
+    /*
+        ==============================
+        ENVIA RESULTADO PARA CLIENTE
+        ==============================
+    */
+
+    snprintf(
+        buffer,
+        sizeof(buffer),
+        "RESULT:%s|%s|%d|%d",
+        nomeServidor,
+        nomeCliente,
+        qtdDeRodadasServer,
+        qtdDeRodadasClient
+    );
+
+    enviarMensagem(
+        clientSocket,
+        buffer
+    );
+
+
+    /*
+        Dá um pequeno tempo para garantir
+        que o cliente receba o resultado
+        antes de receber GAME_END.
+    */
+
+    Sleep(100);
+
     enviarMensagem(
         clientSocket,
         "GAME_END"
     );
 
 
+    /*
+        ==============================
+        RESULTADO NO SERVIDOR
+        ==============================
+    */
+
+    limparTela();
+
     printf(
-        "\nCara a cara encerrado.\n"
+        "========================================\n"
+    );
+
+    printf(
+        "             FIM DO CARA A CARA\n"
+    );
+
+    printf(
+        "========================================\n\n"
+    );
+
+    printf(
+        "Categoria: %s\n\n",
+        nomeCategoria
+    );
+
+    printf(
+        "SERVER: %s\n",
+        nomeServidor
+    );
+
+    printf(
+        "Quantidade de mensagens: %d\n\n",
+        qtdDeRodadasServer
+    );
+
+    printf(
+        "CLIENT: %s\n",
+        nomeCliente
+    );
+
+    printf(
+        "Quantidade de mensagens: %d\n",
+        qtdDeRodadasClient
+    );
+
+    printf(
+        "\n========================================\n"
     );
 
     system("pause");
 }
-
-
 
 /* =========================================================
    MAIN
