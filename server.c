@@ -713,6 +713,269 @@ void iniciarCaraACara(
    MAIN
    ========================================================= */
 
+/*
+    Cria uma nova categoria e permite adicionar seus elementos.
+
+    A categoria precisa obrigatoriamente ter pelo menos
+    2 elementos.
+
+    /sair finaliza a criação dos elementos, desde que
+    já existam pelo menos 2.
+*/
+void criarCategoria() {
+
+    char nomeCategoria[MAX_LINHA];
+    char elemento[MAX_LINHA];
+    char caminho[MAX_LINHA];
+
+    int quantidadeElementos = 0;
+
+
+    /*
+        ==============================
+        NOME DA CATEGORIA
+        ==============================
+    */
+
+    limparTela();
+
+    printf("========================================\n");
+    printf("           CRIAR CATEGORIA\n");
+    printf("========================================\n\n");
+
+    printf("Nome da categoria: ");
+
+    if (fgets(
+            nomeCategoria,
+            sizeof(nomeCategoria),
+            stdin
+        ) == NULL) {
+
+        return;
+    }
+
+    limparEntrada(nomeCategoria);
+
+
+    /*
+        Não permite nome vazio.
+    */
+
+    while (strlen(nomeCategoria) == 0) {
+
+        printf(
+            "\nO nome da categoria nao pode estar vazio.\n"
+        );
+
+        printf(
+            "Nome da categoria: "
+        );
+
+        if (fgets(
+                nomeCategoria,
+                sizeof(nomeCategoria),
+                stdin
+            ) == NULL) {
+
+            return;
+        }
+
+        limparEntrada(nomeCategoria);
+    }
+
+
+    /*
+        ======================================
+        CRIA O CAMINHO DO ARQUIVO
+        ======================================
+    */
+
+    snprintf(
+        caminho,
+        sizeof(caminho),
+        "%s\\%s.txt",
+        PASTA_CATEGORIAS,
+        nomeCategoria
+    );
+
+
+    /*
+        ======================================
+        CRIA O ARQUIVO
+        ======================================
+    */
+
+    FILE *arquivo = fopen(
+        caminho,
+        "w"
+    );
+
+    if (arquivo == NULL) {
+
+        printf(
+            "\nErro ao criar a categoria.\n"
+        );
+
+        printf(
+            "Arquivo: %s\n",
+            caminho
+        );
+
+        system("pause");
+
+        return;
+    }
+
+
+    /*
+        ======================================
+        ADICIONA OS ELEMENTOS
+        ======================================
+    */
+
+    while (1) {
+
+        printf(
+            "\nElemento %d da categoria %s: ",
+            quantidadeElementos + 1,
+            nomeCategoria
+        );
+
+
+        if (fgets(
+                elemento,
+                sizeof(elemento),
+                stdin
+            ) == NULL) {
+
+            fclose(arquivo);
+
+            return;
+        }
+
+        limparEntrada(elemento);
+
+
+        /*
+            ----------------------------------
+            /sair
+            ----------------------------------
+        */
+
+        if (strcmp(
+                elemento,
+                "/sair"
+            ) == 0) {
+
+            /*
+                Só permite finalizar se houver
+                pelo menos 2 elementos.
+            */
+
+            if (quantidadeElementos < 2) {
+
+                printf(
+                    "\nA categoria deve ter obrigatoriamente "
+                    "pelo menos 2 elementos.\n"
+                );
+
+                printf(
+                    "Adicione mais %d elemento(s).\n",
+                    2 - quantidadeElementos
+                );
+
+                continue;
+            }
+
+            break;
+        }
+
+
+        /*
+            ----------------------------------
+            ELEMENTO VAZIO
+            ----------------------------------
+        */
+
+        if (strlen(elemento) == 0) {
+
+            printf(
+                "\nO elemento nao pode estar vazio.\n"
+            );
+
+            continue;
+        }
+
+
+        /*
+            ----------------------------------
+            SALVA ELEMENTO
+            ----------------------------------
+        */
+
+        fprintf(
+            arquivo,
+            "%s\n",
+            elemento
+        );
+
+        quantidadeElementos++;
+
+        printf(
+            "Elemento adicionado com sucesso!\n"
+        );
+    }
+
+
+    /*
+        Fecha o arquivo.
+    */
+
+    fclose(arquivo);
+
+
+    /*
+        ======================================
+        FINALIZACAO
+        ======================================
+    */
+
+    limparTela();
+
+    printf(
+        "========================================\n"
+    );
+
+    printf(
+        "       CATEGORIA CRIADA COM SUCESSO\n"
+    );
+
+    printf(
+        "========================================\n\n"
+    );
+
+    printf(
+        "Nome: %s\n",
+        nomeCategoria
+    );
+
+    printf(
+        "Elementos: %d\n",
+        quantidadeElementos
+    );
+
+    printf(
+        "Arquivo: %s\n",
+        caminho
+    );
+
+    printf(
+        "\n========================================\n"
+    );
+
+    system("pause");
+}
+
 int main() {
 
     WSADATA winsocketsDados;
@@ -1092,23 +1355,13 @@ int main() {
             ----------------------------------
         */
 
-        if (strcmp(entrada, "2") == 0) {
+		if (strcmp(entrada, "2") == 0) {
 
-            limparTela();
+    		criarCategoria();
 
-            printf(
-                "Criar categoria\n"
-            );
+    		continue;
+		}
 
-            printf(
-                "Esta funcao pode ser implementada "
-                "para criar um novo TXT.\n"
-            );
-
-            system("pause");
-
-            continue;
-        }
 
 
         /*
