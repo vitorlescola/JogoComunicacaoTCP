@@ -5,7 +5,10 @@
 #include <winsock2.h>
 #include <windows.h>
 
+#include <mmsystem.h>
+
 #pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "winmm.lib")
 
 #define PORTA 51171
 #define BUFFER_SIZE 512
@@ -25,6 +28,8 @@ typedef struct {
    FUNCOES AUXILIARES
    ========================================================= */
 
+int musicaAberta=0;
+
 void limparTela() {
     system("cls");
 }
@@ -39,7 +44,8 @@ void mostrarMenuPrincipal() {
     printf("1 - Selecionar categoria\n");
     printf("2 - Criar categoria\n");
     printf("3 - Creditos\n");
-    printf("4 - Sair\n");
+    printf("4 - Musica\n");
+    printf("5 - Sair\n");
     printf("==================================\n");
     printf("\nOpcao: ");
 }
@@ -723,6 +729,7 @@ void iniciarCaraACara(
     já existam pelo menos 2.
 */
 void criarCategoria() {
+	
 
     char nomeCategoria[MAX_LINHA];
     char elemento[MAX_LINHA];
@@ -975,6 +982,36 @@ void criarCategoria() {
 
     system("pause");
 }
+
+void tocarMusica() {
+
+    if (!musicaAberta) {
+
+        MCIERROR erro = mciSendString(
+            "open \"teste.mp3\" type mpegvideo alias musica",
+            NULL,
+            0,
+            NULL
+        );
+
+        if (erro != 0) {
+            printf("\nErro ao abrir a musica.\n");
+            return;
+        }
+
+        musicaAberta = 1;
+    }
+
+    mciSendString(
+        "play musica",
+        NULL,
+        0,
+        NULL
+    );
+
+    printf("\nMusica tocando...\n");
+}
+
 
 int main() {
 
@@ -1402,15 +1439,20 @@ int main() {
 
             continue;
         }
+        
+        if (strcmp(entrada,"4")==0){
+        	tocarMusica();
+            continue;
+        }
 
 
         /*
             ----------------------------------
-            OPCAO 4
+            OPCAO 5
             ----------------------------------
         */
 
-        if (strcmp(entrada, "4") == 0) {
+        if (strcmp(entrada, "5") == 0) {
 
             enviarMensagem(
                 clientSocket,
