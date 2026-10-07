@@ -18,27 +18,22 @@
 
 #define PASTA_CATEGORIAS "categorias"
 
-typedef struct {
+typedef struct{
     char nome[MAX_LINHA];
     char arquivo[MAX_LINHA];
-} Categoria;
-
-
-/* =========================================================
-   FUNCOES AUXILIARES
-   ========================================================= */
+}Categoria;
 
 int musicaAberta=0;
 
-void limparTela() {
+void limparTela(){
     system("cls");
 }
 
-void limparEntrada(char *str) {
-    str[strcspn(str, "\r\n")] = '\0';
+void limparEntrada(char *str){
+    str[strcspn(str, "\r\n")]='\0';
 }
 
-void mostrarMenuPrincipal() {
+void mostrarMenuPrincipal(){
     printf("\n");
     printf("============== MENU ==============\n");
     printf("1 - Selecionar categoria\n");
@@ -50,230 +45,140 @@ void mostrarMenuPrincipal() {
     printf("\nOpcao: ");
 }
 
-void mostrarMenuCategorias(Categoria categorias[], int quantidade) {
+void mostrarMenuCategorias(Categoria categorias[], int quantidade){
 	int i;
 	
     printf("\n");
     printf("========= CATEGORIAS =========\n");
 
-    for (i = 0; i < quantidade; i++) {
-        printf("%d - %s\n", i + 1, categorias[i].nome);
+    for(i=0;i<quantidade;i++){
+        printf("%d - %s\n",i+1,categorias[i].nome);
     }
 
-    printf("%d - Sair\n", quantidade + 1);
-
+    printf("%d - Sair\n",quantidade+1);
     printf("==============================\n");
     printf("\nOpcao: ");
 }
 
-
-/*
-    Envia uma mensagem inteira pelo socket.
-
-    O TCP nao garante que um send() corresponde exatamente
-    a um recv(), portanto colocamos '\n' no final e o cliente
-    trata as mensagens como linhas.
-*/
 int enviarMensagem(SOCKET socket, const char *mensagem) {
-
     char buffer[BUFFER_SIZE];
 
-    snprintf(
-        buffer,
-        sizeof(buffer),
-        "%s\n",
-        mensagem
-    );
+    snprintf(buffer,sizeof(buffer),"%s\n",mensagem);
 
-    int tamanho = (int)strlen(buffer);
-    int enviado = 0;
+    int tamanho=(int)strlen(buffer);
+    int enviado=0;
 
-    while (enviado < tamanho) {
+    while(enviado<tamanho){
+        int resultado=send(socket,buffer+enviado,tamanho-enviado,0);
 
-        int resultado = send(
-            socket,
-            buffer + enviado,
-            tamanho - enviado,
-            0
-        );
-
-        if (resultado == SOCKET_ERROR) {
+        if(resultado==SOCKET_ERROR){
             return 0;
         }
 
-        enviado += resultado;
+        enviado+=resultado;
     }
 
     return 1;
 }
 
-
-/*
-    Recebe uma linha do cliente.
-*/
-int receberMensagem(SOCKET socket, char *buffer, int tamanho) {
-
+int receberMensagem(SOCKET socket, char *buffer, int tamanho){
     int posicao = 0;
 
-    while (posicao < tamanho - 1) {
+    while(posicao<tamanho-1){
 
         char caractere;
 
-        int resultado = recv(
-            socket,
-            &caractere,
-            1,
-            0
-        );
+        int resultado=recv(socket,&caractere,1,0);
 
-        if (resultado <= 0) {
+        if(resultado<=0){
             return 0;
         }
 
-        if (caractere == '\n') {
+        if(caractere=='\n'){
             break;
         }
 
-        if (caractere != '\r') {
+        if(caractere!='\r'){
             buffer[posicao++] = caractere;
         }
     }
 
-    buffer[posicao] = '\0';
+    buffer[posicao]='\0';
 
     return 1;
 }
 
-
-/*
-    Procura os arquivos .txt dentro da pasta categorias.
-
-    Cada arquivo encontrado vira uma categoria.
-*/
-int carregarCategorias(Categoria categorias[]) {
+int carregarCategorias(Categoria categorias[]){
 
     WIN32_FIND_DATAA dados;
     HANDLE busca;
 
     char caminho[MAX_LINHA];
 
-    snprintf(
-        caminho,
-        sizeof(caminho),
-        "%s\\*.txt",
-        PASTA_CATEGORIAS
-    );
+    snprintf(caminho,sizeof(caminho),"%s\\*.txt",PASTA_CATEGORIAS);
 
-    busca = FindFirstFileA(caminho, &dados);
+    busca=FindFirstFileA(caminho,&dados);
 
-    if (busca == INVALID_HANDLE_VALUE) {
+    if(busca==INVALID_HANDLE_VALUE){
         return 0;
     }
 
-    int quantidade = 0;
+    int quantidade=0;
 
-    do {
-
-        if (dados.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+    do{
+        if(dados.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY){
             continue;
         }
 
-        if (quantidade >= MAX_CATEGORIAS) {
+        if(quantidade>=MAX_CATEGORIAS){
             break;
         }
 
-        /*
-            Guarda o nome do arquivo.
-        */
-        strncpy(
-            categorias[quantidade].arquivo,
-            dados.cFileName,
-            MAX_LINHA - 1
-        );
+        strncpy(categorias[quantidade].arquivo,dados.cFileName,MAX_LINHA-1);
 
-        categorias[quantidade].arquivo[MAX_LINHA - 1] = '\0';
+        categorias[quantidade].arquivo[MAX_LINHA-1]='\0';
 
+        strncpy(categorias[quantidade].nome,dados.cFileName,MAX_LINHA-1);
 
-        /*
-            Remove .txt para mostrar um nome mais bonito.
-        */
-        strncpy(
-            categorias[quantidade].nome,
-            dados.cFileName,
-            MAX_LINHA - 1
-        );
+        categorias[quantidade].nome[MAX_LINHA-1]='\0';
 
-        categorias[quantidade].nome[MAX_LINHA - 1] = '\0';
+        char *extensao=strrchr(categorias[quantidade].nome,'.');
 
-        char *extensao = strrchr(
-            categorias[quantidade].nome,
-            '.'
-        );
-
-        if (extensao != NULL) {
-            *extensao = '\0';
+        if(extensao!=NULL){
+			*extensao='\0';
         }
 
         quantidade++;
 
-    } while (FindNextFileA(busca, &dados));
+    }while(FindNextFileA(busca, &dados));
 
     FindClose(busca);
 
     return quantidade;
 }
 
-
-/*
-    Le todos os nomes de uma categoria.
-*/
-int carregarNomes(
-    const char *arquivo,
-    char nomes[][MAX_LINHA]
-) {
-
+int carregarNomes(const char *arquivo,char nomes[][MAX_LINHA]){
     char caminho[MAX_LINHA];
 
-    snprintf(
-        caminho,
-        sizeof(caminho),
-        "%s\\%s",
-        PASTA_CATEGORIAS,
-        arquivo
-    );
+    snprintf(caminho,sizeof(caminho),"%s\\%s",PASTA_CATEGORIAS,arquivo);
 
-    FILE *file = fopen(caminho, "r");
+    FILE *file=fopen(caminho,"r");
 
-    if (file == NULL) {
-
-        printf(
-            "\nErro ao abrir o arquivo: %s\n",
-            caminho
-        );
+    if(file==NULL){
+        printf("\nErro ao abrir o arquivo: %s\n",caminho);
 
         return 0;
     }
 
-    int quantidade = 0;
+    int quantidade=0;
 
-    while (
-        quantidade < MAX_NOMES &&
-        fgets(
-            nomes[quantidade],
-            MAX_LINHA,
-            file
-        ) != NULL
-    ) {
-
+    while(quantidade<MAX_NOMES&&fgets(nomes[quantidade],MAX_LINHA,file)!= NULL){
         limparEntrada(nomes[quantidade]);
 
-        /*
-            Ignora linhas vazias.
-        */
-        if (strlen(nomes[quantidade]) == 0) {
+        if(strlen(nomes[quantidade])==0){
             continue;
         }
-
+        
         quantidade++;
     }
 
@@ -282,15 +187,7 @@ int carregarNomes(
     return quantidade;
 }
 
-
-/*
-    Mostra todos os nomes da categoria.
-*/
-void mostrarNomes(
-    char nomes[][MAX_LINHA],
-    int quantidade
-) {
-
+void mostrarNomes(char nomes[][MAX_LINHA],int quantidade){
     printf("\n");
     printf("========== NOMES ==========\n");
     int i;
@@ -301,42 +198,24 @@ void mostrarNomes(
     printf("===========================\n");
 }
 
-
-/*
-    Aguarda S ou N.
-*/
-char perguntarUtilizarCategoria() {
-
+char perguntarUtilizarCategoria(){
     char entrada[20];
 
-    while (1) {
-
+    while(1){
         printf("\nUtilizar esta categoria?: (S/N) ");
 
-        if (fgets(
-                entrada,
-                sizeof(entrada),
-                stdin
-            ) == NULL) {
-
+        if(fgets(entrada,sizeof(entrada),stdin)==NULL){
             continue;
         }
-
+        
         limparEntrada(entrada);
 
-        if (strlen(entrada) == 1) {
-
-            if (
-                entrada[0] == 'S' ||
-                entrada[0] == 's'
-            ) {
+        if(strlen(entrada)==1){
+            if(entrada[0]=='S'||entrada[0]=='s'){
                 return 'S';
             }
 
-            if (
-                entrada[0] == 'N' ||
-                entrada[0] == 'n'
-            ) {
+            if(entrada[0] =='N'||entrada[0]=='n'){
                 return 'N';
             }
         }
@@ -345,516 +224,172 @@ char perguntarUtilizarCategoria() {
     }
 }
 
-
-/*
-    Faz o cara a cara.
-
-    Ordem:
-
-    SERVER
-    CLIENT
-    SERVER
-    CLIENT
-    ...
-*/
-void iniciarCaraACara(
-    SOCKET clientSocket,
-    const char *nomeCategoria,
-    char nomes[][MAX_LINHA],
-    int quantidadeNomes
-) {
-
+void iniciarCaraACara(SOCKET clientSocket,const char *nomeCategoria,char nomes[][MAX_LINHA],int quantidadeNomes){
     char buffer[BUFFER_SIZE];
 
-    if (quantidadeNomes < 2) {
+    if(quantidadeNomes<2){
         printf("\nA categoria precisa ter pelo menos 2 nomes.\n");
         system("pause");
+        
         return;
     }
 
-    /*
-        Sorteia dois nomes diferentes.
-    */
-    int indiceServidor = rand() % quantidadeNomes;
+    int indiceServidor=rand()%quantidadeNomes;
     int indiceCliente;
 
-    do {
-        indiceCliente = rand() % quantidadeNomes;
-    } while (indiceCliente == indiceServidor);
+    do{
+        indiceCliente=rand()%quantidadeNomes;
+    }while(indiceCliente==indiceServidor);
 
     char nomeServidor[MAX_LINHA];
     char nomeCliente[MAX_LINHA];
 
-    strcpy(nomeServidor, nomes[indiceServidor]);
-    strcpy(nomeCliente, nomes[indiceCliente]);
+    strcpy(nomeServidor,nomes[indiceServidor]);
+    strcpy(nomeCliente,nomes[indiceCliente]);
 
-
-    /*
-        Quantidade de mensagens enviadas por cada jogador.
-    */
-    int qtdDeRodadasServer = 0;
-    int qtdDeRodadasClient = 0;
-
+    int qtdDeRodadasServer=0;
+    int qtdDeRodadasClient=0;
 
     limparTela();
 
-    enviarMensagem(
-        clientSocket,
-        "CLEAR"
-    );
+    enviarMensagem(clientSocket,"CLEAR");
+    snprintf(buffer,sizeof(buffer),"CATEGORY:%s|%s",nomeCategoria,nomeCliente);
+    enviarMensagem(clientSocket,buffer);
 
+    printf("========================================\n");
+    printf("           CATEGORIA: %s\n",nomeCategoria);
+    printf("           SEU NOME: %s\n",nomeServidor);
+    printf("========================================\n\n");
+    printf("Sua vez (SERVER)\n");
+    printf("Digite sua mensagem: ");
 
-    /*
-        Envia categoria e nome do cliente.
-    */
-    snprintf(
-        buffer,
-        sizeof(buffer),
-        "CATEGORY:%s|%s",
-        nomeCategoria,
-        nomeCliente
-    );
-
-    enviarMensagem(
-        clientSocket,
-        buffer
-    );
-
-
-    /*
-        ==============================
-        TELA DO SERVIDOR
-        ==============================
-    */
-
-    printf(
-        "========================================\n"
-    );
-
-    printf(
-        "           CATEGORIA: %s\n",
-        nomeCategoria
-    );
-
-    printf(
-        "           SEU NOME: %s\n",
-        nomeServidor
-    );
-
-    printf(
-        "========================================\n\n"
-    );
-
-
-    /*
-        ==============================
-        PRIMEIRA MENSAGEM - SERVIDOR
-        ==============================
-    */
-
-    printf(
-        "Sua vez (SERVER)\n"
-    );
-
-    printf(
-        "Digite sua mensagem: "
-    );
-
-    if (fgets(
-            buffer,
-            sizeof(buffer),
-            stdin
-        ) == NULL) {
-
+    if(fgets(buffer,sizeof(buffer),stdin)==NULL){
         return;
     }
 
     limparEntrada(buffer);
 
-
-    /*
-        A primeira mensagem também conta.
-    */
     qtdDeRodadasServer++;
 
 
     char mensagemEnvio[BUFFER_SIZE];
 
-    snprintf(
-        mensagemEnvio,
-        sizeof(mensagemEnvio),
-        "SERVER:%s",
-        buffer
-    );
+    snprintf(mensagemEnvio,sizeof(mensagemEnvio),"SERVER:%s",buffer);
+    enviarMensagem(clientSocket,mensagemEnvio);
 
-    enviarMensagem(
-        clientSocket,
-        mensagemEnvio
-    );
+    while(1){
+        printf("\nAguardando mensagem do CLIENTE...\n");
 
-
-    /*
-        ==============================
-        COMUNICAÇÃO
-        ==============================
-    */
-
-    while (1) {
-
-        /*
-            --------------------------------
-            VEZ DO CLIENTE
-            --------------------------------
-        */
-
-        printf(
-            "\nAguardando mensagem do CLIENTE...\n"
-        );
-
-        if (!receberMensagem(
-                clientSocket,
-                buffer,
-                sizeof(buffer)
-            )) {
-
-            printf(
-                "\nCliente desconectou.\n"
-            );
-
+        if(!receberMensagem(clientSocket,buffer,sizeof(buffer))){
+            printf("\nCliente desconectou.\n");
+            
             break;
         }
 
-
-        /*
-            /sair não é contado.
-        */
-        if (strcmp(
-                buffer,
-                "GAME_EXIT"
-            ) == 0) {
-
+        if(strcmp(buffer,"GAME_EXIT")==0){
             break;
         }
 
-
-        /*
-            Cliente enviou uma mensagem.
-            Agora conta +1.
-        */
-        if (strncmp(
-                buffer,
-                "CLIENT:",
-                7
-            ) == 0) {
-
+        if(strncmp(buffer,"CLIENT:",7)==0){
             qtdDeRodadasClient++;
 
-            printf(
-                "\nCLIENT: %s\n",
-                buffer + 7
-            );
+            printf("\nCLIENT: %s\n",buffer+7);
         }
 
+        printf("\nSua vez (SERVER)\n");
+        printf("Digite sua mensagem (ou /sair): ");
 
-        /*
-            --------------------------------
-            VEZ DO SERVIDOR
-            --------------------------------
-        */
-
-        printf(
-            "\nSua vez (SERVER)\n"
-        );
-
-        printf(
-            "Digite sua mensagem (ou /sair): "
-        );
-
-        if (fgets(
-                buffer,
-                sizeof(buffer),
-                stdin
-            ) == NULL) {
-
+        if(fgets(buffer,sizeof(buffer),stdin)==NULL){
             break;
         }
 
         limparEntrada(buffer);
 
-
-        /*
-            /sair NÃO conta.
-        */
-        if (strcmp(
-                buffer,
-                "/sair"
-            ) == 0) {
-
-            enviarMensagem(
-                clientSocket,
-                "GAME_EXIT"
-            );
-
+        if(strcmp(buffer,"/sair")==0){
+            enviarMensagem(clientSocket,"GAME_EXIT");
+            
             break;
         }
 
-
-        /*
-            Mensagem normal do servidor.
-            Conta +1.
-        */
         qtdDeRodadasServer++;
 
+        snprintf(mensagemEnvio,sizeof(mensagemEnvio),"SERVER:%s",buffer);
 
-        snprintf(
-            mensagemEnvio,
-            sizeof(mensagemEnvio),
-            "SERVER:%s",
-            buffer
-        );
-
-        if (!enviarMensagem(
-                clientSocket,
-                mensagemEnvio
-            )) {
-
-            printf(
-                "\nErro ao enviar mensagem.\n"
-            );
-
+        if(!enviarMensagem(clientSocket,mensagemEnvio)){
+            printf("\nErro ao enviar mensagem.\n");
+            
             break;
         }
     }
 
+    snprintf(buffer,sizeof(buffer),"RESULT:%s|%s|%d|%d",nomeServidor,nomeCliente,qtdDeRodadasServer,qtdDeRodadasClient);
 
-    /*
-        ==============================
-        ENVIA RESULTADO PARA CLIENTE
-        ==============================
-    */
-
-    snprintf(
-        buffer,
-        sizeof(buffer),
-        "RESULT:%s|%s|%d|%d",
-        nomeServidor,
-        nomeCliente,
-        qtdDeRodadasServer,
-        qtdDeRodadasClient
-    );
-
-    enviarMensagem(
-        clientSocket,
-        buffer
-    );
-
-
-    /*
-        Dá um pequeno tempo para garantir
-        que o cliente receba o resultado
-        antes de receber GAME_END.
-    */
+    enviarMensagem(clientSocket,buffer);
 
     Sleep(100);
 
-    enviarMensagem(
-        clientSocket,
-        "GAME_END"
-    );
-
-
-    /*
-        ==============================
-        RESULTADO NO SERVIDOR
-        ==============================
-    */
+    enviarMensagem(clientSocket,"GAME_END");
 
     limparTela();
 
-    printf(
-        "========================================\n"
-    );
-
-    printf(
-        "             FIM DO CARA A CARA\n"
-    );
-
-    printf(
-        "========================================\n\n"
-    );
-
-    printf(
-        "Categoria: %s\n\n",
-        nomeCategoria
-    );
-
-    printf(
-        "SERVER: %s\n",
-        nomeServidor
-    );
-
-    printf(
-        "Quantidade de mensagens: %d\n\n",
-        qtdDeRodadasServer
-    );
-
-    printf(
-        "CLIENT: %s\n",
-        nomeCliente
-    );
-
-    printf(
-        "Quantidade de mensagens: %d\n",
-        qtdDeRodadasClient
-    );
-
-    printf(
-        "\n========================================\n"
-    );
-
+    printf("========================================\n");
+    printf("             FIM DO CARA A CARA\n");
+    printf("========================================\n\n");
+    printf("Categoria: %s\n\n",nomeCategoria);
+    printf("SERVER: %s\n",nomeServidor);
+    printf("Quantidade de mensagens: %d\n\n",qtdDeRodadasServer);
+    printf("CLIENT: %s\n",nomeCliente);
+    printf("Quantidade de mensagens: %d\n",qtdDeRodadasClient);
+    printf("\n========================================\n");
     system("pause");
 }
 
-/* =========================================================
-   MAIN
-   ========================================================= */
-
-/*
-    Cria uma nova categoria e permite adicionar seus elementos.
-
-    A categoria precisa obrigatoriamente ter pelo menos
-    2 elementos.
-
-    /sair finaliza a criação dos elementos, desde que
-    já existam pelo menos 2.
-*/
-void criarCategoria() {
-	
-
+void criarCategoria(){
     char nomeCategoria[MAX_LINHA];
     char elemento[MAX_LINHA];
     char caminho[MAX_LINHA];
-
-    int quantidadeElementos = 0;
-
-
-    /*
-        ==============================
-        NOME DA CATEGORIA
-        ==============================
-    */
+    int quantidadeElementos=0;
 
     limparTela();
 
     printf("========================================\n");
     printf("           CRIAR CATEGORIA\n");
     printf("========================================\n\n");
-
     printf("Nome da categoria: ");
 
-    if (fgets(
-            nomeCategoria,
-            sizeof(nomeCategoria),
-            stdin
-        ) == NULL) {
-
+    if(fgets(nomeCategoria,sizeof(nomeCategoria),stdin)==NULL){
         return;
     }
 
     limparEntrada(nomeCategoria);
 
+    while(strlen(nomeCategoria)==0){
+        printf("\nO nome da categoria nao pode estar vazio.\n");
+        printf("Nome da categoria: ");
 
-    /*
-        Não permite nome vazio.
-    */
-
-    while (strlen(nomeCategoria) == 0) {
-
-        printf(
-            "\nO nome da categoria nao pode estar vazio.\n"
-        );
-
-        printf(
-            "Nome da categoria: "
-        );
-
-        if (fgets(
-                nomeCategoria,
-                sizeof(nomeCategoria),
-                stdin
-            ) == NULL) {
-
+        if(fgets(nomeCategoria,sizeof(nomeCategoria),stdin)==NULL){
             return;
         }
 
         limparEntrada(nomeCategoria);
     }
 
+    snprintf(caminho,sizeof(caminho),"%s\\%s.txt",PASTA_CATEGORIAS,nomeCategoria);
 
-    /*
-        ======================================
-        CRIA O CAMINHO DO ARQUIVO
-        ======================================
-    */
+    FILE *arquivo=fopen(caminho,"w");
 
-    snprintf(
-        caminho,
-        sizeof(caminho),
-        "%s\\%s.txt",
-        PASTA_CATEGORIAS,
-        nomeCategoria
-    );
-
-
-    /*
-        ======================================
-        CRIA O ARQUIVO
-        ======================================
-    */
-
-    FILE *arquivo = fopen(
-        caminho,
-        "w"
-    );
-
-    if (arquivo == NULL) {
-
-        printf(
-            "\nErro ao criar a categoria.\n"
-        );
-
-        printf(
-            "Arquivo: %s\n",
-            caminho
-        );
-
+    if(arquivo==NULL){
+        printf("\nErro ao criar a categoria.\n");
+        printf("Arquivo: %s\n",caminho);
         system("pause");
 
         return;
     }
 
+    while(1){
+        printf("\nElemento %d da categoria %s: ",quantidadeElementos+1,nomeCategoria);
 
-    /*
-        ======================================
-        ADICIONA OS ELEMENTOS
-        ======================================
-    */
-
-    while (1) {
-
-        printf(
-            "\nElemento %d da categoria %s: ",
-            quantidadeElementos + 1,
-            nomeCategoria
-        );
-
-
-        if (fgets(
-                elemento,
-                sizeof(elemento),
-                stdin
-            ) == NULL) {
-
+        if(fgets(elemento,sizeof(elemento),stdin)==NULL){
             fclose(arquivo);
 
             return;
@@ -862,34 +397,10 @@ void criarCategoria() {
 
         limparEntrada(elemento);
 
-
-        /*
-            ----------------------------------
-            /sair
-            ----------------------------------
-        */
-
-        if (strcmp(
-                elemento,
-                "/sair"
-            ) == 0) {
-
-            /*
-                Só permite finalizar se houver
-                pelo menos 2 elementos.
-            */
-
-            if (quantidadeElementos < 2) {
-
-                printf(
-                    "\nA categoria deve ter obrigatoriamente "
-                    "pelo menos 2 elementos.\n"
-                );
-
-                printf(
-                    "Adicione mais %d elemento(s).\n",
-                    2 - quantidadeElementos
-                );
+        if(strcmp(elemento,"/sair")==0){
+            if(quantidadeElementos<2){
+                printf("\nA categoria deve ter obrigatoriamente pelo menos 2 elementos.\n");
+                printf("Adicione mais %d elemento(s).\n",2-quantidadeElementos);
 
                 continue;
             }
@@ -897,204 +408,82 @@ void criarCategoria() {
             break;
         }
 
-
-        /*
-            ----------------------------------
-            ELEMENTO VAZIO
-            ----------------------------------
-        */
-
-        if (strlen(elemento) == 0) {
-
-            printf(
-                "\nO elemento nao pode estar vazio.\n"
-            );
+        if(strlen(elemento)==0){
+            printf("\nO elemento nao pode estar vazio.\n");
 
             continue;
         }
 
-
-        /*
-            ----------------------------------
-            SALVA ELEMENTO
-            ----------------------------------
-        */
-
-        fprintf(
-            arquivo,
-            "%s\n",
-            elemento
-        );
+        fprintf(arquivo,"%s\n",elemento);
 
         quantidadeElementos++;
 
-        printf(
-            "Elemento adicionado com sucesso!\n"
-        );
+        printf("Elemento adicionado com sucesso!\n");
     }
-
-
-    /*
-        Fecha o arquivo.
-    */
 
     fclose(arquivo);
 
-
-    /*
-        ======================================
-        FINALIZACAO
-        ======================================
-    */
-
     limparTela();
 
-    printf(
-        "========================================\n"
-    );
-
-    printf(
-        "       CATEGORIA CRIADA COM SUCESSO\n"
-    );
-
-    printf(
-        "========================================\n\n"
-    );
-
-    printf(
-        "Nome: %s\n",
-        nomeCategoria
-    );
-
-    printf(
-        "Elementos: %d\n",
-        quantidadeElementos
-    );
-
-    printf(
-        "Arquivo: %s\n",
-        caminho
-    );
-
-    printf(
-        "\n========================================\n"
-    );
-
+    printf("========================================\n");
+    printf("       CATEGORIA CRIADA COM SUCESSO\n");
+    printf("========================================\n\n");
+    printf("Nome: %s\n",nomeCategoria);
+    printf("Elementos: %d\n",quantidadeElementos);
+    printf("Arquivo: %s\n",caminho);
+    printf("\n========================================\n");
     system("pause");
 }
 
-void tocarMusica() {
-
-    if (!musicaAberta) {
-
-        MCIERROR erro = mciSendString(
-            "open \"teste.mp3\" type mpegvideo alias musica",
-            NULL,
-            0,
-            NULL
-        );
-
-        if (erro != 0) {
+void tocarMusica(){
+    if(!musicaAberta){
+        MCIERROR erro=mciSendString("open \"mg.mp3\" type mpegvideo alias musica",NULL,0,NULL);
+        if(erro!=0){
             printf("\nErro ao abrir a musica.\n");
+            
             return;
         }
 
-        musicaAberta = 1;
+        musicaAberta=1;
     }
 
-    mciSendString(
-        "play musica",
-        NULL,
-        0,
-        NULL
-    );
+    mciSendString("play musica",NULL,0,NULL);
 
     printf("\nMusica tocando...\n");
 }
 
-
-int main() {
-
+int main(){
     WSADATA winsocketsDados;
 
-    if (WSAStartup(
-            MAKEWORD(2, 2),
-            &winsocketsDados
-        ) != 0) {
-
-        printf(
-            "WSAStartup falhou.\n"
-        );
+    if(WSAStartup(MAKEWORD(2,2),&winsocketsDados)!=0){
+        printf("WSAStartup falhou.\n");
 
         return 1;
     }
 
+    CreateDirectoryA(PASTA_CATEGORIAS,NULL);
 
-    /*
-        Cria a pasta categorias caso ela ainda nao exista.
-    */
-    CreateDirectoryA(
-        PASTA_CATEGORIAS,
-        NULL
-    );
+    srand((unsigned int)time(NULL));
 
+    SOCKET sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
 
-    /*
-        Inicializa aleatoriedade.
-    */
-    srand(
-        (unsigned int)time(NULL)
-    );
-
-
-    /*
-        ======================================
-        SOCKET DO SERVIDOR
-        ======================================
-    */
-
-    SOCKET sock = socket(
-        AF_INET,
-        SOCK_STREAM,
-        IPPROTO_TCP
-    );
-
-    if (sock == INVALID_SOCKET) {
-
-        printf(
-            "Erro ao criar socket: %d\n",
-            WSAGetLastError()
-        );
-
+    if(sock==INVALID_SOCKET){
+        printf("Erro ao criar socket: %d\n",WSAGetLastError());
         WSACleanup();
 
         return 1;
     }
-
 
     struct sockaddr_in server;
 
-    memset(
-        &server,
-        0,
-        sizeof(server)
-    );
+    memset(&server,0,sizeof(server));
 
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(PORTA);
+    server.sin_family=AF_INET;
+    server.sin_addr.s_addr=INADDR_ANY;
+    server.sin_port=htons(PORTA);
 
-
-    if (bind(
-            sock,
-            (struct sockaddr*)&server,
-            sizeof(server)
-        ) == SOCKET_ERROR) {
-
-        printf(
-            "Erro no bind: %d\n",
-            WSAGetLastError()
-        );
+    if(bind(sock,(struct sockaddr*)&server,sizeof(server))==SOCKET_ERROR){
+        printf("Erro no bind: %d\n",WSAGetLastError());
 
         closesocket(sock);
         WSACleanup();
@@ -1103,15 +492,8 @@ int main() {
     }
 
 
-    if (listen(
-            sock,
-            SOMAXCONN
-        ) == SOCKET_ERROR) {
-
-        printf(
-            "Erro no listen: %d\n",
-            WSAGetLastError()
-        );
+    if(listen(sock,SOMAXCONN)==SOCKET_ERROR){
+        printf("Erro no listen: %d\n",WSAGetLastError());
 
         closesocket(sock);
         WSACleanup();
@@ -1120,37 +502,18 @@ int main() {
     }
 
 
-    printf(
-        "Servidor aguardando conexao na porta %d...\n",
-        PORTA
-    );
-
-
-    /*
-        ======================================
-        ACEITA CLIENTE
-        ======================================
-    */
+    printf("Servidor aguardando conexao na porta %d...\n",PORTA);
 
     SOCKET clientSocket;
 
     struct sockaddr_in clientAddr;
 
-    int clientAddrLen =
-        sizeof(clientAddr);
+    int clientAddrLen=sizeof(clientAddr);
 
-    clientSocket = accept(
-        sock,
-        (struct sockaddr*)&clientAddr,
-        &clientAddrLen
-    );
+    clientSocket=accept(sock,(struct sockaddr*)&clientAddr,&clientAddrLen);
 
-    if (clientSocket == INVALID_SOCKET) {
-
-        printf(
-            "Erro ao aceitar cliente: %d\n",
-            WSAGetLastError()
-        );
+    if(clientSocket==INVALID_SOCKET){
+        printf("Erro ao aceitar cliente: %d\n",WSAGetLastError());
 
         closesocket(sock);
         WSACleanup();
@@ -1158,226 +521,88 @@ int main() {
         return 1;
     }
 
+    printf("\nCliente conectado com sucesso!\n");
 
-    printf(
-        "\nCliente conectado com sucesso!\n"
-    );
-
-
-    /*
-        ======================================
-        MENU PRINCIPAL
-        ======================================
-    */
-
-    while (1) {
-
+    while(1){
         limparTela();
-
         mostrarMenuPrincipal();
 
         char entrada[50];
 
-        if (fgets(
-                entrada,
-                sizeof(entrada),
-                stdin
-            ) == NULL) {
-
+        if(fgets(entrada,sizeof(entrada),stdin)==NULL){
             continue;
         }
 
         limparEntrada(entrada);
+        
+        //switch
 
-
-        /*
-            ----------------------------------
-            OPCAO 1
-            ----------------------------------
-        */
-
-        if (strcmp(entrada, "1") == 0) {
-
+        if(strcmp(entrada,"1")==0){
             Categoria categorias[MAX_CATEGORIAS];
 
-            int quantidadeCategorias =
-                carregarCategorias(categorias);
+            int quantidadeCategorias=carregarCategorias(categorias);
 
-
-            if (quantidadeCategorias == 0) {
-
-                printf(
-                    "\nNenhuma categoria encontrada.\n"
-                );
-
-                printf(
-                    "Coloque arquivos .txt dentro da pasta "
-                    "\"categorias\".\n"
-                );
-
+            if(quantidadeCategorias==0){
+                printf("\nNenhuma categoria encontrada.\n");
+                printf("Coloque arquivos .txt dentro da pasta \"categorias\".\n");
                 system("pause");
 
                 continue;
             }
 
-
-            /*
-                Menu de categorias.
-            */
-
-            while (1) {
-
+            while(1){
                 limparTela();
+                mostrarMenuCategorias(categorias,quantidadeCategorias);
 
-                mostrarMenuCategorias(
-                    categorias,
-                    quantidadeCategorias
-                );
-
-
-                if (fgets(
-                        entrada,
-                        sizeof(entrada),
-                        stdin
-                    ) == NULL) {
-
+                if(fgets(entrada,sizeof(entrada),stdin)==NULL){
                     continue;
                 }
 
                 limparEntrada(entrada);
 
+                int opcaoCategoria=atoi(entrada);
 
-                int opcaoCategoria =
-                    atoi(entrada);
-
-
-                /*
-                    Ultima opcao = Sair.
-                */
-                if (
-                    opcaoCategoria ==
-                    quantidadeCategorias + 1
-                ) {
-
+                if(opcaoCategoria==quantidadeCategorias+1){
                     break;
                 }
 
-
-                /*
-                    Verifica se categoria existe.
-                */
-                if (
-                    opcaoCategoria < 1 ||
-                    opcaoCategoria > quantidadeCategorias
-                ) {
-
-                    printf(
-                        "\nOpcao invalida!\n"
-                    );
-
+                if(opcaoCategoria<1||opcaoCategoria>quantidadeCategorias){
+                    printf("\nOpcao invalida!\n");
                     system("pause");
 
                     continue;
                 }
-
-
-                /*
-                    --------------------------------
-                    ABRE O TXT
-                    --------------------------------
-                */
 
                 limparTela();
 
-                Categoria categoriaSelecionada =
-                    categorias[opcaoCategoria - 1];
-
+                Categoria categoriaSelecionada=categorias[opcaoCategoria-1];
 
                 char nomes[MAX_NOMES][MAX_LINHA];
+                int quantidadeNomes=carregarNomes(categoriaSelecionada.arquivo,nomes);
 
-                int quantidadeNomes =
-                    carregarNomes(
-                        categoriaSelecionada.arquivo,
-                        nomes
-                    );
-
-
-                if (quantidadeNomes == 0) {
-
-                    printf(
-                        "\nA categoria esta vazia.\n"
-                    );
-
+                if(quantidadeNomes==0){
+                    printf("\nA categoria esta vazia.\n");
                     system("pause");
 
                     continue;
                 }
 
+                printf("Categoria: %s\n",categoriaSelecionada.nome);
 
-                /*
-                    Mostra todos os nomes.
-                */
+                mostrarNomes(nomes,quantidadeNomes);
 
-                printf(
-                    "Categoria: %s\n",
-                    categoriaSelecionada.nome
-                );
+                char utilizar=perguntarUtilizarCategoria();
 
-                mostrarNomes(
-                    nomes,
-                    quantidadeNomes
-                );
-
-
-                /*
-                    Pergunta se deseja utilizar.
-                */
-
-                char utilizar =
-                    perguntarUtilizarCategoria();
-
-
-                /*
-                    N = volta para categorias.
-                */
-
-                if (utilizar == 'N') {
+                if(utilizar=='N'){
                     continue;
                 }
 
-
-                /*
-                    S = sorteia um nome.
-                */
-
-                int indiceSorteado =
-                    rand() % quantidadeNomes;
-
-
+                int indiceSorteado=rand()%quantidadeNomes;
                 char nomeSorteado[MAX_LINHA];
 
-                strcpy(
-                    nomeSorteado,
-                    nomes[indiceSorteado]
-                );
+                strcpy(nomeSorteado,nomes[indiceSorteado]);
 
-
-                /*
-                    Inicia o cara a cara.
-                */
-
-				iniciarCaraACara(
-    				clientSocket,
-    				categoriaSelecionada.nome,
-    				nomes,
-    				quantidadeNomes
-				);
-
-
-                /*
-                    Depois que termina,
-                    volta ao menu principal.
-                */
+				iniciarCaraACara(clientSocket,categoriaSelecionada.nome,nomes,quantidadeNomes);
 
                 break;
             }
@@ -1386,55 +611,21 @@ int main() {
         }
 
 
-        /*
-            ----------------------------------
-            OPCAO 2
-            ----------------------------------
-        */
-
-		if (strcmp(entrada, "2") == 0) {
-
+		if(strcmp(entrada,"2")==0){
     		criarCategoria();
 
     		continue;
 		}
 
-
-
-        /*
-            ----------------------------------
-            OPCAO 3
-            ----------------------------------
-        */
-
-        if (strcmp(entrada, "3") == 0) {
-
+        if(strcmp(entrada,"3")==0){
             limparTela();
 
-            printf(
-                "=================================\n"
-            );
-
-            printf(
-                "             CREDITOS\n"
-            );
-
-            printf(
-                "=================================\n"
-            );
-
-            printf(
-                "Simulador de Cara a Cara\n"
-            );
-
-            printf(
-                "Servidor / Cliente TCP\n"
-            );
-
-            printf(
-                "=================================\n"
-            );
-
+            printf("=================================\n");
+            printf("             CREDITOS\n");
+            printf("=================================\n");
+            printf("Simulador de Cara a Cara\n");
+            printf("Servidor / Cliente TCP\n");
+            printf("=================================\n");
             system("pause");
 
             continue;
@@ -1445,40 +636,21 @@ int main() {
             continue;
         }
 
-
-        /*
-            ----------------------------------
-            OPCAO 5
-            ----------------------------------
-        */
-
-        if (strcmp(entrada, "5") == 0) {
-
-            enviarMensagem(
-                clientSocket,
-                "EXIT"
-            );
+        if(strcmp(entrada,"5")==0){
+            enviarMensagem(clientSocket,"EXIT");
 
             break;
         }
 
-
-        printf(
-            "\nOpcao invalida!\n"
-        );
-
+        printf("\nOpcao invalida!\n");
         system("pause");
     }
 
-
     closesocket(clientSocket);
     closesocket(sock);
-
     WSACleanup();
 
-    printf(
-        "\nServidor encerrado.\n"
-    );
+    printf("\nServidor encerrado.\n");
 
     return 0;
 }
