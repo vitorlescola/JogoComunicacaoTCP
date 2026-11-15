@@ -387,7 +387,7 @@ void criarCategoria(){
     }
 
     while(1){
-        printf("\nElemento %d da categoria %s: ",quantidadeElementos+1,nomeCategoria);
+        printf("\nElemento %d da categoria %s(ou /sair): ",quantidadeElementos+1,nomeCategoria);
 
         if(fgets(elemento,sizeof(elemento),stdin)==NULL){
             fclose(arquivo);
@@ -437,7 +437,7 @@ void criarCategoria(){
 
 void tocarMusica(){
     if(!musicaAberta){
-        MCIERROR erro=mciSendString("open \"mg.mp3\" type mpegvideo alias musica",NULL,0,NULL);
+        MCIERROR erro=mciSendString("open \"teste.mp3\" type mpegvideo alias musica",NULL,0,NULL);
         if(erro!=0){
             printf("\nErro ao abrir a musica.\n");
             
@@ -633,6 +633,7 @@ int main(){
         
         if (strcmp(entrada,"4")==0){
         	tocarMusica();
+        	
             continue;
         }
 
